@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Self-Improving AI</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Autonomous Learning System</p>
+          <h1>Self-Improving AI</h1>
+        </div>
+        <div class="status-pill" id="statusPill">Standby</div>
+      </header>
+
+      <main class="layout">
+        <aside class="panel left-panel">
+          <section>
+            <h2>Objective</h2>
+            <textarea id="objectiveInput" rows="6" placeholder="Example: Improve the AI system so it can research, plan, and execute its own upgrades more effectively.">Improve the AI to research itself, locate better architecture, and plan upgrades automatically.</textarea>
+          </section>
+
+          <section>
+            <h2>Controls</h2>
+            <div class="button-stack">
+              <button id="scanBtn">Scan App</button>
+              <button id="researchBtn">Web Research</button>
+              <button id="planBtn">Build Upgrade Plan</button>
+              <button id="cycleBtn" class="primary">Run Self-Improvement Cycle</button>
+            </div>
+          </section>
+
+          <section>
+            <h2>System Memory</h2>
+            <ul id="memoryList" class="memory-list"></ul>
+          </section>
+        </aside>
+
+        <section class="panel main-panel">
+          <div class="cards">
+            <div class="card">
+              <h3>Architecture</h3>
+              <div id="architectureReport" class="report-box">Waiting for scan...</div>
+            </div>
+            <div class="card">
+              <h3>Research</h3>
+              <div id="researchReport" class="report-box">No research yet.</div>
+            </div>
+            <div class="card full-width">
+              <h3>Upgrade Plan</h3>
+              <div id="planReport" class="report-box">No upgrade plan generated yet.</div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>

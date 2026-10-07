@@ -1,0 +1,155 @@
+const state = {
+  architecture: "",
+  research: "",
+  plan: "",
+  memory: []
+};
+
+const els = {
+  objectiveInput: document.getElementById("objectiveInput"),
+  statusPill: document.getElementById("statusPill"),
+  architectureReport: document.getElementById("architectureReport"),
+  researchReport: document.getElementById("researchReport"),
+  planReport: document.getElementById("planReport"),
+  memoryList: document.getElementById("memoryList"),
+  scanBtn: document.getElementById("scanBtn"),
+  researchBtn: document.getElementById("researchBtn"),
+  planBtn: document.getElementById("planBtn"),
+  cycleBtn: document.getElementById("cycleBtn")
+};
+
+const defaultMemory = [
+  "Model initialized",
+  "Architecture scanner ready",
+  "Research engine connected",
+  "Upgrade planner loaded"
+];
+
+function loadMemory() {
+  const saved = JSON.parse(localStorage.getItem("selfImprovingAiMemory") || "null");
+  state.memory = saved || defaultMemory;
+  renderMemory();
+}
+
+function saveMemory() {
+  localStorage.setItem("selfImprovingAiMemory", JSON.stringify(state.memory));
+  renderMemory();
+}
+
+function renderMemory() {
+  els.memoryList.innerHTML = "";
+  state.memory.slice(0, 6).forEach((item) => {
+    const li = document.createElement("li");
+    li.textContent = item;
+    els.memoryList.appendChild(li);
+  });
+}
+
+function setStatus(text, tone = "normal") {
+  els.statusPill.textContent = text;
+  els.statusPill.style.color = tone === "good" ? "#61e39a" : tone === "warn" ? "#ffcc66" : "#53d6ff";
+  els.statusPill.style.borderColor = tone === "good" ? "rgba(97,227,154,0.5)" : tone === "warn" ? "rgba(255,204,102,0.5)" : "rgba(83,214,255,0.4)";
+  els.statusPill.style.background = tone === "good" ? "rgba(97,227,154,0.08)" : tone === "warn" ? "rgba(255,204,102,0.08)" : "rgba(83,214,255,0.12)";
+}
+
+function inferArchitectureFromContext() {
+  return [
+    "Input Layer: User objective / prompts",
+    "Memory Layer: Local browser storage + self-learning notes",
+    "Research Layer: Public web APIs + search + fact retrieval",
+    "Planner Layer: Upgrade roadmap generator",
+    "Execution Layer: Browser UI actions and automation hooks",
+    "Evaluation Layer: Self-check, confidence scoring, next-step prioritization"
+  ].join("\n");
+}
+
+function scanApp() {
+  const objective = els.objectiveInput.value || "Improve AI autonomy";
+  const architectureText = inferArchitectureFromContext();
+  state.architecture = `Objective: ${objective}\n\nDetected architecture:\n${architectureText}\n\nObservations:\n- App is browser-native and can open locally\n- Memory is persisted in localStorage\n- Internet research can be delegated to public APIs\n- Upgrade planning can be generated without external compilation`;
+  els.architectureReport.textContent = state.architecture;
+  addMemory("Architecture scan completed");
+  setStatus("Scanned", "good");
+}
+
+async function researchWeb() {
+  const query = (els.objectiveInput.value || "self improving ai").trim();
+  const searchTerm = encodeURIComponent(query + " autonomous ai architecture 2025");
+  const urls = [
+    `https://api.duckduckgo.com/?format=json&no_html=1&skip_disambig=1&q=${searchTerm}`,
+    `https://api.github.com/search/repositories?q=${encodeURIComponent(query + " ai agent")}&per_page=3`
+  ];
+
+  try {
+    setStatus("Researching", "warn");
+    const [duck, github] = await Promise.all([
+      fetch(urls[0]).then((res) => res.json()).catch(() => null),
+      fetch(urls[1], { headers: { Accept: "application/vnd.github+json" } }).then((res) => res.json()).catch(() => null)
+    ]);
+
+    const summary = duck && duck.Abstract ? duck.Abstract : "No direct abstract found in search result.";
+    const repos = github && github.items ? github.items.map((item) => `- ${item.full_name}: ${item.description || "No description"}`).join("\n") : "- No public GitHub repos found for this query.";
+
+    state.research = `Research topic: ${query}\n\nWeb insight:\n${summary}\n\nRelated repositories:\n${repos}`;
+    els.researchReport.textContent = state.research;
+    addMemory("Web research completed");
+    setStatus("Research ready", "good");
+  } catch (error) {
+    state.research = "Research query failed. The app is still functional but no live data was returned from public APIs.";
+    els.researchReport.textContent = state.research;
+    setStatus("Research failed", "warn");
+  }
+}
+
+function buildPlan() {
+  const objective = els.objectiveInput.value || "Improve self-learning ability";
+  const plan = [
+    "1. Add a structured memory graph for facts, experiences, and decisions.",
+    "2. Integrate web search APIs for external knowledge retrieval and trend scanning.",
+    "3. Split the AI into specialized modules: planner, researcher, evaluator, executor.",
+    "4. Add confidence scoring and self-review for every generated recommendation.",
+    "5. Introduce a patch-generation workflow that writes plans, diffs, or TODOs automatically.",
+    "6. Maintain versioned learning logs so the system can compare earlier and newer behaviors.",
+    "7. Add user approval gates before applying potentially risky or destructive changes.",
+    "8. Expand the model with controlled tool access: browser, code search, shell, API integration."
+  ].join("\n");
+
+  state.plan = `Objective: ${objective}\n\nUpgrade plan:\n${plan}`;
+  els.planReport.textContent = state.plan;
+  addMemory("Upgrade plan created");
+  setStatus("Plan ready", "good");
+}
+
+function addMemory(note) {
+  state.memory.unshift(note);
+  state.memory = [...new Set(state.memory)].slice(0, 8);
+  saveMemory();
+}
+
+function runSelfImprovementCycle() {
+  scanApp();
+  setTimeout(() => {
+    researchWeb();
+  }, 250);
+  setTimeout(() => {
+    buildPlan();
+  }, 650);
+  setTimeout(() => {
+    const final = [
+      "Self-improvement cycle completed.",
+      "The AI has analyzed its architecture, researched the surrounding ecosystem, and produced an upgrade roadmap.",
+      "Next step: implement the planner and memory modules as reusable backend services."
+    ].join("\n");
+    addMemory("Self-improvement cycle executed");
+    els.planReport.textContent += `\n\n---\n${final}`;
+    setStatus("Cycle complete", "good");
+  }, 1250);
+}
+
+els.scanBtn.addEventListener("click", scanApp);
+els.researchBtn.addEventListener("click", researchWeb);
+els.planBtn.addEventListener("click", buildPlan);
+els.cycleBtn.addEventListener("click", runSelfImprovementCycle);
+
+loadMemory();
+setStatus("Standby");
