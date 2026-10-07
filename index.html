@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Self-Improving AI v2.0</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">🤖 Autonomous Learning System v2.0</p>
+          <h1>Self-Improving AI</h1>
+        </div>
+        <div class="status-pill" id="statusPill">Siap</div>
+      </header>
+
+      <main class="layout">
+        <!-- Left Panel: Chat -->
+        <aside class="panel left-panel">
+          <section class="chat-section">
+            <h2>💬 Chat dengan AI</h2>
+            <div id="chatBox" class="chat-box">
+              <div class="chat-message ai">
+                <p>Halo! Saya AI yang sedang belajar. Anda bisa:</p>
+                <p>- Ngobrol sesuatu dengan saya</p>
+                <p>- Suruh saya "Pelajari tentang X"</p>
+                <p>- Tanya apa yang sudah saya pelajari</p>
+              </div>
+            </div>
+            <div class="chat-input-area">
+              <textarea id="chatInput" placeholder="Ketik pesan Anda di sini... (Bahasa Indonesia atau English)" rows="3"></textarea>
+              <button id="sendBtn" class="primary">📤 Kirim</button>
+            </div>
+          </section>
+
+          <section class="learning-quick">
+            <h3>⚡ Quick Learn</h3>
+            <input type="text" id="quickLearnInput" placeholder="Pelajari tentang..." />
+            <button id="quickLearnBtn">📚 Pelajari</button>
+          </section>
+        </aside>
+
+        <!-- Right Panel: Main Content -->
+        <section class="panel main-panel">
+          <div class="tabs">
+            <button class="tab-btn active" data-tab="objective">Objective</button>
+            <button class="tab-btn" data-tab="architecture">Arsitektur</button>
+            <button class="tab-btn" data-tab="learning">📚 Learning</button>
+            <button class="tab-btn" data-tab="upgrade">📈 Rencana Upgrade</button>
+          </div>
+
+          <div class="tab-content">
+            <!-- Objective Tab -->
+            <div id="objective-tab" class="tab-pane active">
+              <h2>Objective</h2>
+              <textarea id="objectiveInput" rows="6" placeholder="Masukkan tujuan AI Anda di sini...">Upgrade AI agar bisa belajar topik baru, analyze code, dan membuat rencana improvement otomatis.</textarea>
+              <button id="analyzeBtn" class="primary">🔍 Analisis</button>
+            </div>
+
+            <!-- Architecture Tab -->
+            <div id="architecture-tab" class="tab-pane">
+              <h2>Arsitektur Sistem</h2>
+              <div id="architectureReport" class="report-box">Tekan 'Analisis' untuk melihat arsitektur...</div>
+            </div>
+
+            <!-- Learning Tab -->
+            <div id="learning-tab" class="tab-pane">
+              <h2>📚 Learning History</h2>
+              <button id="refreshLearningBtn" class="secondary">🔄 Refresh</button>
+              <div id="learningHistory" class="learning-list">
+                <p>Belum ada pembelajaran...</p>
+              </div>
+            </div>
+
+            <!-- Upgrade Tab -->
+            <div id="upgrade-tab" class="tab-pane">
+              <h2>📈 Rencana Upgrade</h2>
+              <button id="generatePlanBtn" class="primary">✨ Generate Rencana</button>
+              <div id="upgradePlan" class="report-box">Rencana upgrade akan ditampilkan di sini...</div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>

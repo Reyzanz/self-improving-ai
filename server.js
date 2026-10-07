@@ -1,162 +1,236 @@
+require('dotenv').config();
 const express = require('express');
 const path = require('path');
+const http = require('http');
+const sqlite3 = require('sqlite3').verbose();
+const { OpenAI } = require('openai');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(express.static(path.join(__dirname)));
+// Database setup
+const db = new sqlite3.Database(path.join(__dirname, 'ai-memory.db'), (err) => {
+  if (err) console.error('Database error:', err);
+  else console.log('Database connected');
+  initDatabase();
+});
 
-function buildArchitecture(objective) {
-  return [
-    `Objective: ${objective}`,
-    '',
-    'Detected architecture:',
-    '1. Input layer: user goals, prompts, and instructions',
-    '2. Memory layer: browser persistence + structured learning notes',
-    '3. Research layer: public web APIs and trend tracking',
-    '4. Planner layer: upgrade roadmap and decision support',
-    '5. Execution layer: task orchestration and validation hooks',
-    '6. Evaluation layer: confidence scoring and iterative improvement',
-    '',
-    'Observations:',
-    '- System can inspect itself and describe operational structure',
-    '- Browser client can persist memory locally',
-    '- Server-side orchestration enables real external research',
-    '- Upgrade planning can be guided by evidence and trend analysis'
-  ].join('\n');
+function initDatabase() {
+  db.serialize(() => {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS learning_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        topic TEXT,
+        content TEXT,
+        source TEXT,
+        learned_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        category TEXT
+      )
+    `);
+
+    db.run(`
+      CREATE TABLE IF NOT EXISTS chat_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        role TEXT,
+        message TEXT,
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    db.run(`
+      CREATE TABLE IF NOT EXISTS improvement_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        objective TEXT,
+        improvement_plan TEXT,
+        status TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+  });
 }
 
-function buildPlan(objective) {
-  return [
-    `Objective: ${objective}`,
-    '',
-    'Upgrade plan:',
-    '1. Add persistent memory store with structured facts, reflection logs, and task history.',
-    '2. Introduce a backend orchestrator to retrieve external research and run tool calls safely.',
-    '3. Split the app into dedicated modules: researcher, planner, evaluator, executor.',
-    '4. Add confidence scoring and human approval gates before high-impact changes.',
-    '5. Integrate repository search and code analysis for deeper self-improvement.',
-    '6. Store versioned learning snapshots and compare successive agent behaviors.',
-    '7. Add a command layer for browser, terminal, or API-based automation.',
-    '8. Expand the system with objective tracking, benchmarks, and success metrics.'
-  ].join('\n');
+// OpenAI setup
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+app.use(express.static(path.join(__dirname)));
+app.use(express.json());
+
+// Helper functions
+function makeRequest(url) {
+  return new Promise((resolve, reject) => {
+    http.get(url, (res) => {
+      let data = '';
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
+      res.on('end', () => {
+        try {
+          resolve(JSON.parse(data));
+        } catch (e) {
+          resolve(data);
+        }
+      });
+    }).on('error', reject);
+  });
 }
 
 async function fetchDuckDuckGo(query) {
-  const url = `https://api.duckduckgo.com/?format=json&no_redirect=1&no_html=1&q=${encodeURIComponent(query)}`;
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`DuckDuckGo request failed: ${response.status}`);
-  }
-  return response.json();
-}
-
-async function fetchGitHubRepos(query) {
-  const url = `https://api.github.com/search/repositories?q=${encodeURIComponent(query)}&per_page=5`;
-  const response = await fetch(url, {
-    headers: {
-      Accept: 'application/vnd.github+json',
-      'User-Agent': 'self-improving-ai-app'
-    }
-  });
-  if (!response.ok) {
-    throw new Error(`GitHub request failed: ${response.status}`);
-  }
-  const data = await response.json();
-  return data.items || [];
-}
-
-app.get('/api/health', (req, res) => {
-  res.json({ ok: true, status: 'running' });
-});
-
-app.get('/api/scan', (req, res) => {
-  const objective = req.query.q || 'Improve the AI to learn and evolve';
-  res.json({
-    objective,
-    architecture: buildArchitecture(objective)
-  });
-});
-
-app.get('/api/research', async (req, res) => {
   try {
-    const query = req.query.q || 'self improving ai architecture';
-    const ddg = await fetchDuckDuckGo(`${query} autonomous learning AI`);
-    const repos = await fetchGitHubRepos(`${query} AI agent`);
-
-    const abstract = ddg.Abstract || ddg.RelatedTopics?.[0]?.Text || 'No background summary returned by the public search service.';
-    const repoList = repos.length
-      ? repos.map((item) => `- ${item.full_name}: ${item.description || 'No description available.'}`).join('\n')
-      : '- No matching repositories were returned by the GitHub API.';
-
-    const payload = {
-      query,
-      abstract,
-      repos: repoList,
-      research: `Research topic: ${query}\n\nWeb insight:\n${abstract}\n\nRelated repositories:\n${repoList}`
-    };
-
-    res.json(payload);
+    const url = `http://api.duckduckgo.com/?format=json&no_redirect=1&no_html=1&q=${encodeURIComponent(query)}`;
+    return await makeRequest(url);
   } catch (error) {
-    res.status(500).json({
-      error: 'Research failed',
-      message: error.message,
-      research: 'The backend could not fetch the public research data. Please verify internet access or try a different query.'
-    });
+    return { Abstract: 'Pencarian tidak tersedia' };
   }
-});
+}
 
-app.get('/api/plan', (req, res) => {
-  const objective = req.query.q || 'Improve the AI to learn and evolve';
-  res.json({
-    objective,
-    plan: buildPlan(objective)
+function addToLearningHistory(topic, content, source = 'user', category = 'general') {
+  return new Promise((resolve, reject) => {
+    db.run(
+      `INSERT INTO learning_history (topic, content, source, category) VALUES (?, ?, ?, ?)`,
+      [topic, content, source, category],
+      (err) => {
+        if (err) reject(err);
+        else resolve();
+      }
+    );
   });
-});
+}
 
-app.get('/api/cycle', async (req, res) => {
+function getLearningHistory(limit = 10) {
+  return new Promise((resolve, reject) => {
+    db.all(
+      `SELECT * FROM learning_history ORDER BY learned_at DESC LIMIT ?`,
+      [limit],
+      (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows || []);
+      }
+    );
+  });
+}
+
+function saveChatHistory(role, message) {
+  db.run(
+    `INSERT INTO chat_history (role, message) VALUES (?, ?)`,
+    [role, message]
+  );
+}
+
+// API Endpoints
+app.post('/api/chat', async (req, res) => {
   try {
-    const objective = req.query.q || 'Improve the AI to learn and evolve';
-    const architecture = buildArchitecture(objective);
-    const research = await fetchDuckDuckGo(`${objective} autonomous AI`);
-    const repos = await fetchGitHubRepos(`${objective} AI agent`);
+    const userMessage = req.body.message || '';
+    
+    saveChatHistory('user', userMessage);
 
-    const abstract = research.Abstract || 'Public research summary unavailable';
-    const repoList = repos.length
-      ? repos.map((item) => `- ${item.full_name}: ${item.description || 'No description'}`).join('\n')
-      : '- No matching repos found';
+    // Get learning history context
+    const learningHistory = await getLearningHistory(5);
+    const historyContext = learningHistory
+      .map(l => `${l.topic}: ${l.content}`)
+      .join('\n');
 
-    const plan = buildPlan(objective);
-    const finalReport = [
-      `Objective: ${objective}`,
-      '',
-      'Architecture summary:',
-      architecture,
-      '',
-      'Research summary:',
-      abstract,
-      '',
-      'Repository signals:',
-      repoList,
-      '',
-      'Upgrade roadmap:',
-      plan
-    ].join('\n');
+    const systemPrompt = `Anda adalah AI yang sedang belajar dan berkembang. Anda bisa:
+1. Mempelajari topik baru (user suruh "Pelajari tentang X")
+2. Menganalisis kode dan arsitektur
+3. Membuat rencana upgrade
+4. Menjawab pertanyaan sesuai apa yang sudah dipelajari
+
+Pembelajaran sebelumnya:
+${historyContext || 'Belum ada pembelajaran sebelumnya'}
+
+Gunakan bahasa Indonesia yang natural dan membantu. Jika user minta mempelajari sesuatu, ekstrak informasi penting dan simpan.`;
+
+    const response = await openai.chat.completions.create({
+      model: 'gpt-3.5-turbo',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userMessage }
+      ],
+      temperature: 0.7,
+      max_tokens: 1000
+    });
+
+    const assistantMessage = response.choices[0].message.content;
+    saveChatHistory('assistant', assistantMessage);
+
+    // Check if user asked to learn something
+    if (userMessage.toLowerCase().includes('pelajari') || userMessage.toLowerCase().includes('learn')) {
+      const topic = userMessage.replace(/pelajari|learn/gi, '').trim();
+      const research = await fetchDuckDuckGo(topic);
+      const abstract = research.Abstract || 'Tidak ada ringkasan tersedia';
+      
+      await addToLearningHistory(
+        topic,
+        abstract,
+        'web_research',
+        'learning'
+      );
+    }
 
     res.json({
-      objective,
-      architecture,
-      research: abstract,
-      repoList,
-      plan,
-      finalReport
+      message: assistantMessage,
+      learned: userMessage.toLowerCase().includes('pelajari')
     });
   } catch (error) {
+    console.error('Chat error:', error);
     res.status(500).json({
-      error: 'Self-improvement cycle failed',
+      error: 'Chat failed',
       message: error.message
     });
   }
+});
+
+app.get('/api/learning-history', async (req, res) => {
+  try {
+    const history = await getLearningHistory(20);
+    res.json({ history });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/learn', async (req, res) => {
+  try {
+    const topic = req.body.topic || '';
+    const research = await fetchDuckDuckGo(topic);
+    const abstract = research.Abstract || 'Tidak ada ringkasan';
+
+    await addToLearningHistory(
+      topic,
+      abstract,
+      'user_request',
+      'learning'
+    );
+
+    // Get AI analysis
+    const analysis = await openai.chat.completions.create({
+      model: 'gpt-3.5-turbo',
+      messages: [
+        {
+          role: 'user',
+          content: `Anda telah belajar tentang "${topic}". Ringkasan: ${abstract}\n\nBerikan analisis singkat dalam bahasa Indonesia tentang topik ini dan bagaimana bisa digunakan untuk upgrade sistem AI.`
+        }
+      ],
+      max_tokens: 500
+    });
+
+    const aiAnalysis = analysis.choices[0].message.content;
+
+    res.json({
+      topic,
+      summary: abstract,
+      analysis: aiAnalysis,
+      learned: true
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/health', (req, res) => {
+  res.json({ ok: true, status: 'running', openaiConnected: !!process.env.OPENAI_API_KEY });
 });
 
 app.get('*', (req, res) => {
@@ -164,5 +238,7 @@ app.get('*', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Self-Improving AI is running on http://localhost:${PORT}`);
+  console.log(`\n🚀 Self-Improving AI v2.0 running on http://localhost:${PORT}`);
+  console.log(`📚 Learning database: ai-memory.db`);
+  console.log(`🤖 OpenAI API: ${process.env.OPENAI_API_KEY ? '✅ Connected' : '❌ Not configured'}\n`);
 });
